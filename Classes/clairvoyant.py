@@ -1,3 +1,4 @@
+
 import numpy as np
 
 def clairvoyant(classes, bids, prices, margins, conversion_rate, env_array):

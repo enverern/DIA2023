@@ -131,3 +131,4 @@ axs[1][1].set_title("Instantaneous Reward")
 fig.suptitle('Comparison between TS and UCB1 for learning the optimal price (Single Class-Stationary Environment)\n(Optimal bid for advertising is known)', fontsize=16)
 plt.subplots_adjust(hspace=0.33)
 plt.show()
+
