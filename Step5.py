@@ -71,12 +71,11 @@ for c in classes:
 
 #EXPERIMENT BEGIN
 
-
 n_experiments = 1000
 
-M = 100 #number of steps to obtain reference point in change detection (for CUSUM)
-eps = 0.1 #epsilon for deviation from reference point in change detection (for CUSUM)
-h = np.log(T)*2 #threshold for change detection (for CUSUM)
+M = 50 #number of steps to obtain reference point in change detection (for CUSUM)
+eps = 0.02 #epsilon for deviation from reference point in change detection (for CUSUM)
+h = np.log(T)**2 #threshold for change detection (for CUSUM)
 
 ucb1_rewards_per_experiments = []
 swucb_rewards_per_experiments = []
@@ -147,6 +146,7 @@ cusum_rewards_per_experiments[2*int(T/3):] = cusum_rewards_per_experiments[2*int
 ucb1_rewards_per_experiments[:int(T/3)] = ucb1_rewards_per_experiments[:int(T/3)] * env_array[0].n(optimal_bid_phase1) - env_array[0].cc(optimal_bid_phase1)
 ucb1_rewards_per_experiments[int(T/3):2*int(T/3)] = ucb1_rewards_per_experiments[int(T/3):2*int(T/3)] * env_array[0].n(optimal_bid_phase2) - env_array[0].cc(optimal_bid_phase2)
 ucb1_rewards_per_experiments[2*int(T/3):] = ucb1_rewards_per_experiments[2*int(T/3):] * env_array[0].n(optimal_bid_phase3) - env_array[0].cc(optimal_bid_phase3)
+
 
 fig, axs = plt.subplots(2,2,figsize=(14,7))
 

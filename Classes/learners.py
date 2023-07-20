@@ -22,6 +22,22 @@ class Learner():
     self.reward_per_arm[pulled_arm].append(reward)
     self.collected_rewards = np.append(self.collected_rewards, reward)
 
+class Greedy_Learner(Learner):
+    def __init__(self, n_arms):
+        super().__init__(n_arms)
+        self.expected_rewards = np.zeros(n_arms)
+
+    def pull_arm(self):
+        if self.t < self.n_arms:
+            return self.t
+        idxs = np.argwhere(self.expected_rewards == self.expected_rewards.max()).reshape(-1)
+        pulled_arm = np.random.choice(idxs)
+        return pulled_arm
+    
+    def update(self, pulled_arm, reward):
+        self.t += 1
+        self.update_observations(pulled_arm, reward)
+        self.expected_rewards[pulled_arm] = (self.expected_rewards[pulled_arm] * (self.t -1) + reward) / self.t
 
 class TS_Learner(Learner):
   def __init__(self, n_arms):
@@ -139,7 +155,7 @@ class GPTS_Learner(Learner):
 
   def pull_arm(self):
     sampled_values = np.random.normal(self.means, self.sigmas)
-    return np.argmax(sampled_values)
+    return np.argmax(sampled_values), self.means, self.sigmas
 
 class GPTS_Learner_combined(GPTS_Learner):
   def __init__(self, n_arms, arms):
@@ -180,10 +196,12 @@ class GPTS_Learner_combined(GPTS_Learner):
     self.update_model()
   
   def pull_arm(self, predicted_best_conversion_rate):
+    pred_y = self.means_numc * predicted_best_conversion_rate - self.means_costc
+    pred_sigma = np.sqrt(self.sigmas_numc**2 * predicted_best_conversion_rate**2 + self.sigmas_costc**2)
     sampled_numc = np.random.normal(self.means_numc, self.sigmas_numc)
     sampled_costc = np.random.normal(self.means_costc, self.sigmas_costc)
     sampled_values = sampled_numc * predicted_best_conversion_rate - sampled_costc
-    return np.argmax(sampled_values)
+    return np.argmax(sampled_values), pred_y, pred_sigma
 
 
 class GPUCB_Learner(Learner): 
@@ -220,7 +238,7 @@ class GPUCB_Learner(Learner):
 
   def pull_arm(self):
     upper_conf = self.means + 1.96 * self.sigmas
-    return np.random.choice(np.where(upper_conf == upper_conf.max())[0])
+    return np.random.choice(np.where(upper_conf == upper_conf.max())[0]), self.means, self.sigmas
 
 
 class GPUCB_Learner_combined(GPUCB_Learner):
@@ -262,10 +280,12 @@ class GPUCB_Learner_combined(GPUCB_Learner):
     self.update_model()
 
   def pull_arm(self, predicted_best_conversion_rate):
+    pred_y = self.means_numc * predicted_best_conversion_rate - self.means_costc
+    pred_sigma = np.sqrt(self.sigmas_numc**2 * predicted_best_conversion_rate**2 + self.sigmas_costc**2)
     upper_conf_numc = self.means_numc + 1.96 * self.sigmas_numc
     lower_conf_costc = self.means_costc - 1.96 * self.sigmas_costc
     upper_conf = upper_conf_numc * predicted_best_conversion_rate - lower_conf_costc
-    return np.random.choice(np.where(upper_conf == upper_conf.max())[0])
+    return np.random.choice(np.where(upper_conf == upper_conf.max())[0]), pred_y, pred_sigma
 
 
 class CUSUM:

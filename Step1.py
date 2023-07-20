@@ -1,4 +1,4 @@
-from Classes.learners import Learner,TS_Learner,UCB1_Learner
+from Classes.learners import Learner,TS_Learner,UCB1_Learner,Greedy_Learner
 from Classes.enviroment import Environment
 from Classes.clairvoyant import clairvoyant
 
@@ -42,6 +42,7 @@ n_experiments = 1000
 
 ts_rewards_per_experiments = []
 ucb1_rewards_per_experiments = []
+greedy_rewards_per_experiments = []
 
 opt_index = int(clairvoyant(classes,bids,prices, margins,conversion_rate,env_array)[0][0])
 opt = normEarnings[opt_index][0]
@@ -53,6 +54,7 @@ for e in tqdm(range(n_experiments)):
   env = env_array[0]
   ts_learner = TS_Learner(n_arms = n_prices)
   ucb1_learner = UCB1_Learner(n_arms = n_prices)
+  greedy_learner = Greedy_Learner(n_arms = n_prices)
   for t in range(0, T):
     pulled_arm = ts_learner.pull_arm()
     reward = env.round(pulled_arm)
@@ -62,53 +64,68 @@ for e in tqdm(range(n_experiments)):
     reward = env.round(pulled_arm) 
     ucb1_learner.update(pulled_arm, reward)
 
+    pulled_arm = greedy_learner.pull_arm()
+    reward = env.round(pulled_arm)
+    greedy_learner.update(pulled_arm, reward)
+
   ts_rewards_per_experiments.append(ts_learner.collected_rewards)
   ucb1_rewards_per_experiments.append(ucb1_learner.collected_rewards)
+  greedy_rewards_per_experiments.append(greedy_learner.collected_rewards)
 
 ts_rewards_per_experiments = np.array(ts_rewards_per_experiments)
 ucb1_rewards_per_experiments = np.array(ucb1_rewards_per_experiments)
+greedy_rewards_per_experiments = np.array(greedy_rewards_per_experiments)
 
 opt_reward = opt * env_array[0].n(optimal_bid) - env_array[0].cc(optimal_bid)
 
 ts_rewards_per_experiments = ts_rewards_per_experiments * env_array[0].n(optimal_bid) - env_array[0].cc(optimal_bid)
 ucb1_rewards_per_experiments = ucb1_rewards_per_experiments * env_array[0].n(optimal_bid) - env_array[0].cc(optimal_bid)
+greedy_rewards_per_experiments = greedy_rewards_per_experiments * env_array[0].n(optimal_bid) - env_array[0].cc(optimal_bid)
 
 fig, axs = plt.subplots(2,2,figsize=(14,7))
 
 axs[0][0].set_xlabel("t")
 axs[0][0].set_ylabel("Regret")
 axs[0][0].plot(np.cumsum(np.mean(opt_reward - ts_rewards_per_experiments, axis = 0)), 'g')
-axs[0][0].plot(np.cumsum(np.mean(opt_reward - ucb1_rewards_per_experiments, axis = 0)), 'y') 
+axs[0][0].plot(np.cumsum(np.mean(opt_reward - ucb1_rewards_per_experiments, axis = 0)), 'y')
+axs[0][0].plot(np.cumsum(np.mean(opt_reward - greedy_rewards_per_experiments, axis = 0)), 'r')
 axs[0][0].plot(np.std(np.cumsum(opt_reward - ts_rewards_per_experiments, axis = 1), axis=0), 'b')   
 axs[0][0].plot(np.std(np.cumsum(opt_reward - ucb1_rewards_per_experiments, axis = 1), axis=0), 'c')
-axs[0][0].legend(["Avg TS", "Avg UCB1","Std TS","Std UCB1"])
+axs[0][0].plot(np.std(np.cumsum(opt_reward - greedy_rewards_per_experiments, axis = 1), axis=0), 'm')
+axs[0][0].legend(["Avg TS", "Avg UCB1", "Avg Greedy", "Std TS","Std UCB1","Std Greedy"])
 axs[0][0].set_title("Cumulative Regret")
 
 axs[0][1].set_xlabel("t")
 axs[0][1].set_ylabel("Reward")
-axs[0][1].plot(np.cumsum(np.mean(ts_rewards_per_experiments, axis = 0)), 'r')
-axs[0][1].plot(np.cumsum(np.mean(ucb1_rewards_per_experiments, axis = 0)), 'm')
+axs[0][1].plot(np.cumsum(np.mean(ts_rewards_per_experiments, axis = 0)), 'g')
+axs[0][1].plot(np.cumsum(np.mean(ucb1_rewards_per_experiments, axis = 0)), 'y')
+axs[0][1].plot(np.cumsum(np.mean(greedy_rewards_per_experiments, axis = 0)), 'r')
 axs[0][1].plot(np.std(np.cumsum(ts_rewards_per_experiments, axis = 1), axis = 0), 'b')
 axs[0][1].plot(np.std(np.cumsum(ucb1_rewards_per_experiments, axis = 1), axis = 0), 'c')
-axs[0][1].legend(["Avg TS", "Avg UCB1","Std TS","Std UCB1"])
+axs[0][1].plot(np.std(np.cumsum(greedy_rewards_per_experiments, axis = 1), axis = 0), 'm')
+axs[0][1].legend(["Avg TS", "Avg UCB1", "Avg Greedy", "Std TS","Std UCB1","Std Greedy"])
 axs[0][1].set_title("Cumulative Reward")
 
 axs[1][0].set_xlabel("t")
 axs[1][0].set_ylabel("Regret")
 axs[1][0].plot(np.mean(opt_reward - ts_rewards_per_experiments, axis = 0), 'g')
 axs[1][0].plot(np.mean(opt_reward - ucb1_rewards_per_experiments, axis = 0), 'y')
+axs[1][0].plot(np.mean(opt_reward - greedy_rewards_per_experiments, axis = 0), 'r')
 axs[1][0].plot(np.std(opt_reward - ts_rewards_per_experiments, axis = 0), 'b')   
 axs[1][0].plot(np.std(opt_reward - ucb1_rewards_per_experiments, axis = 0), 'c')
-axs[1][0].legend(["Avg TS", "Avg UCB1","Std TS","Std UCB1"])
+axs[1][0].plot(np.std(opt_reward - greedy_rewards_per_experiments, axis = 0), 'm')
+axs[1][0].legend(["Avg TS", "Avg UCB1", "Avg Greedy", "Std TS","Std UCB1","Std Greedy"])
 axs[1][0].set_title("Instantaneous Regret")
 
 axs[1][1].set_xlabel("t")
 axs[1][1].set_ylabel("Reward")
 axs[1][1].plot(np.mean(ts_rewards_per_experiments, axis = 0), 'g')
 axs[1][1].plot(np.mean(ucb1_rewards_per_experiments, axis = 0), 'y')
+axs[1][1].plot(np.mean(greedy_rewards_per_experiments, axis = 0), 'r')
 axs[1][1].plot(np.std(ts_rewards_per_experiments, axis = 0), 'b')
 axs[1][1].plot(np.std(ucb1_rewards_per_experiments, axis = 0), 'c')
-axs[1][1].legend(["Avg TS", "Avg UCB1","Std TS","Std UCB1"])
+axs[1][1].plot(np.std(greedy_rewards_per_experiments, axis = 0), 'm')
+axs[1][1].legend(["Avg TS", "Avg UCB1", "Avg Greedy", "Std TS","Std UCB1","Std Greedy"])
 axs[1][1].set_title("Instantaneous Reward")
 
 fig.suptitle('Comparison between TS and UCB1 for learning the optimal price (Single Class-Stationary Environment)\n(Optimal bid for advertising is known)', fontsize=16)

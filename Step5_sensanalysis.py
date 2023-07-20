@@ -74,9 +74,9 @@ for c in classes:
 
 n_experiments = 1000
 window_sizes = [int(4*(T**0.5)),int(6*(T**0.5)),int(8*(T**0.5))]
-M_values = [50, 100, 200]
+M_values = [25, 50, 100]
 eps_values = [0.02, 0.1, 0.5]
-h_values = [np.log(T), np.log(T) * 2, np.log(T) * 4]
+h_values = [np.log(T), np.log(T) ** 2, np.log(T) ** 4]
 
 opt_index_phase1 = int(clairvoyant(classes,bids,prices, margins,conversion_rate_phase1,env_array)[0][0])
 opt_phase1 = normEarnings_phase1[opt_index_phase1][0]

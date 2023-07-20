@@ -54,30 +54,42 @@ noise_std = 1
 gpts_reward = []
 gpucb_reward = []
 
-for e in tqdm(range(n_experiments)):
+gpts_y_values = [[] for i in range(T)]
+gpts_sigmas = [[] for i in range(T)]
+
+gpucb_y_values = [[] for i in range(T)]
+gpucb_sigmas = [[] for i in range(T)]
+
+for e in range(n_experiments):
+    print(e)
     env = env_array[0]
     ts_learner = TS_Learner_combined(n_arms = n_prices)
     gpts_learner = GPTS_Learner_combined(n_arms = n_bids, arms = bids)
     ucb1_learner = UCB1_Learner_combined(n_arms = n_prices)
     gpucb_learner = GPUCB_Learner_combined(n_arms = n_bids, arms = bids)
 
-    for t in range(0, T):
+    for t in tqdm(range(T)):
       pulled_arm_price_idx, pulled_arm_price_val = ts_learner.pull_arm()
-      pulled_arm_bid = gpts_learner.pull_arm(pulled_arm_price_val)
+      pulled_arm_bid, y_value, sigmas = gpts_learner.pull_arm(pulled_arm_price_val)
+      gpts_y_values[t].append(y_value)
+      gpts_sigmas[t].append(sigmas)
       reward_pricing = env.round(pulled_arm_price_idx)
       reward_numc = env.draw_n(bids[pulled_arm_bid],noise_std)
       reward_costc = env.draw_cc(bids[pulled_arm_bid],noise_std)
-      reward_tot = reward_numc * reward_pricing  - reward_costc
+      reward_tot = reward_numc * reward_pricing - reward_costc
       ts_learner.update(pulled_arm_price_idx, reward_pricing)
       gpts_learner.update(pulled_arm_bid, reward = [reward_numc,reward_costc], reward_total = reward_tot)
 
       pulled_arm_price_idx, pulled_arm_price_val = ucb1_learner.pull_arm()
-      pulled_arm_bid = gpucb_learner.pull_arm(pulled_arm_price_val)
+      pulled_arm_bid, y_value, sigmas = gpucb_learner.pull_arm(pulled_arm_price_val)
+      gpucb_y_values[t].append(y_value)
+      gpucb_sigmas[t].append(sigmas)
       reward_pricing = env.round(pulled_arm_price_idx)
       reward_numc = env.draw_n(bids[pulled_arm_bid],noise_std)
       reward_costc = env.draw_cc(bids[pulled_arm_bid],noise_std)
-      reward_tot = reward_numc * reward_pricing  - reward_costc
+      reward_tot = reward_numc * reward_pricing - reward_costc
       ucb1_learner.update(pulled_arm_price_idx, reward_pricing)
+      gpucb_learner.update(pulled_arm_bid, reward = [reward_numc,reward_costc], reward_total = reward_tot)
 
     gpts_reward.append(gpts_learner.collected_rewards_total)
     gpucb_reward.append(gpucb_learner.collected_rewards_total)
@@ -86,6 +98,30 @@ gpts_reward = np.array(gpts_reward)
 gpucb_reward = np.array(gpucb_reward)
 
 opt_reward = opt * env_array[0].n(optimal_bid) - env_array[0].cc(optimal_bid)
+
+
+for i in range(T):
+  if i % 13 == 0:
+    gpts_y_values[i] = np.mean(gpts_y_values[i], axis = 0)
+    gpts_sigmas[i] = np.mean(gpts_sigmas[i], axis = 0)
+    gpucb_y_values[i] = np.mean(gpucb_y_values[i], axis = 0)
+    gpucb_sigmas[i] = np.mean(gpucb_sigmas[i], axis = 0)
+
+    x_pred = np.atleast_2d(bids).T
+    plt.figure(int(i/13)+1)
+    plt.plot(x_pred, opt*env_array[0].n(x_pred)-env_array[0].cc(x_pred), 'r', label=r'$Reward_Curve$')
+    plt.plot(x_pred, gpts_y_values[i], 'b', label=u'GPTS predicted curve')
+    plt.fill(np.concatenate([x_pred, x_pred[::-1]]),
+            np.concatenate([gpts_y_values[i] - 1.9600 * gpts_sigmas[i],
+                            (gpts_y_values[i] + 1.9600 * gpts_sigmas[i])[::-1]]),
+            alpha=.5, fc='c', ec='None', label='95% confidence interval')
+    plt.plot(x_pred, gpucb_y_values[i], 'g', label=u'GP-UCB predicted curve')
+    plt.fill(np.concatenate([x_pred, x_pred[::-1]]),
+            np.concatenate([gpucb_y_values[i] - 1.9600 * gpucb_sigmas[i],
+                            (gpucb_y_values[i] + 1.9600 * gpucb_sigmas[i])[::-1]]),
+            alpha=.5, fc='y', ec='None', label='95% confidence interval')
+    plt.legend()
+    plt.show()
 
 fig, axs = plt.subplots(2,2,figsize=(14,7))
 
